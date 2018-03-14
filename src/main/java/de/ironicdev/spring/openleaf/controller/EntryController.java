@@ -1,24 +1,54 @@
 package de.ironicdev.spring.openleaf.controller;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.sun.javafx.scene.control.skin.VirtualFlow;
+import de.ironicdev.spring.openleaf.exceptions.EntryNotFoundException;
 import de.ironicdev.spring.openleaf.models.*;
 import de.ironicdev.spring.openleaf.repositories.EntryRepository;
+import de.ironicdev.spring.openleaf.services.StorageService;
+import org.apache.commons.io.IOUtils;
+import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.crossstore.ChangeSetPersister;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletResponse;
+import javax.websocket.server.PathParam;
+import java.awt.*;
+import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
+import java.awt.image.ImageObserver;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
+import java.util.List;
 
 @RestController
+@Controller
 public class EntryController {
 
     @Autowired
     private EntryRepository repository;
 
+    private final StorageService storageService;
+    private static final ImageObserver DUMMY_OBSERVER = (img, infoflags, x, y, width, height) -> true;
+
+    @Autowired
+    public EntryController(StorageService service) {
+        this.storageService = service;
+    }
 
     private boolean firstInit = true;
 
@@ -88,7 +118,7 @@ public class EntryController {
                 }
 
                 // if nothing found at all, set status to not found 404
-                if (entryList.size() == 0) response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                if (entryList.size() == 0) throw new EntryNotFoundException();
 
                 // return all found entries
                 return new Gson().toJson(entryList);
@@ -98,6 +128,73 @@ public class EntryController {
             return new Gson().toJson(new ErrorResponse(500,
                     "something critical went wrong. Error reported to support."));
         }
+    }
+
+    @PostMapping("/entries/{entryId}/images")
+    public String entryImageUpload(@RequestParam("image") MultipartFile image,
+                                   @PathVariable("entryId") String entryId,
+                                   RedirectAttributes redirectAttributes) throws EntryNotFoundException {
+
+        // check if entry is available
+        Optional<Entry> dbEntry = repository.findById(entryId);
+
+        if (!dbEntry.isPresent()) throw new EntryNotFoundException();
+
+        String imgId = new ObjectId().toHexString();
+
+        // store in filesystem
+        storageService.storeJPEG(image, imgId);
+
+        // if successfully stored, create entryImage with new ID and assing to given entry
+        EntryImage entryImage = new EntryImage();
+        entryImage.setImageId(imgId);
+        entryImage.setCreatedAt(new Date());
+
+        dbEntry.get().getImages().add(entryImage);
+        repository.save(dbEntry.get());
+
+        return new Gson().toJson(entryImage);
+    }
+
+    @RequestMapping(value = "/entries/images/{imageId}", method = RequestMethod.GET)
+    public void getEntryImage(HttpServletResponse response, @PathVariable("imageId") String imageId) throws IOException {
+        imageId += ".jpg";
+        Path path = storageService.load(imageId);
+        InputStream in = Files.newInputStream(path);
+        response.setContentType(MediaType.IMAGE_JPEG_VALUE);
+        IOUtils.copy(in, response.getOutputStream());
+    }
+
+    @RequestMapping(value = "/entries/images/{imageId}/thumbnail", method = RequestMethod.GET)
+    public void getEntryImageThumbnail(HttpServletResponse response,
+                                       @PathVariable("imageId") String imageId,
+                                       @RequestParam(value = "maxSide", required = false, defaultValue = "150") int maxSide)
+            throws IOException {
+
+        imageId += ".jpg";
+        Path path = storageService.load(imageId);
+        InputStream in = Files.newInputStream(path);
+
+        BufferedImage imgIn = ImageIO.read(path.toFile());
+
+        double scale;
+        if (imgIn.getWidth() >= imgIn.getHeight()) {
+            // horizontal or square image
+            scale = Math.min(maxSide, imgIn.getWidth()) / (double) imgIn.getWidth();
+        } else {
+            // vertical image
+            scale = Math.min(maxSide, imgIn.getHeight()) / (double) imgIn.getHeight();
+        }
+
+        BufferedImage thumbnailOut = new BufferedImage((int) (scale * imgIn.getWidth()),
+                (int) (scale * imgIn.getHeight()),
+                imgIn.getType());
+        Graphics2D g = thumbnailOut.createGraphics();
+
+        AffineTransform transform = AffineTransform.getScaleInstance(scale, scale);
+        g.drawImage(imgIn, transform, DUMMY_OBSERVER);
+        response.setContentType(MediaType.IMAGE_JPEG_VALUE);
+        ImageIO.write(thumbnailOut, "jpg", response.getOutputStream());
     }
 
     @RequestMapping(value = "/entries/initTestData/{quantity}", method = RequestMethod.GET, produces = "application/json")
@@ -194,8 +291,7 @@ public class EntryController {
             repository.delete(e.get());
             http.setStatus(HttpServletResponse.SC_NO_CONTENT);
         } else {
-            http.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            throw new Exception("Entry not found");
+            throw new EntryNotFoundException();
         }
 
         return e.get();
@@ -204,7 +300,7 @@ public class EntryController {
     /**
      * Classic reflection helper method for setting dynamically the properties.
      */
-    public static boolean set(Object object, String fieldName, Object fieldValue) {
+    private static boolean set(Object object, String fieldName, Object fieldValue) {
         Class<?> clazz = object.getClass();
         if (clazz != null) {
             try {
@@ -230,5 +326,10 @@ public class EntryController {
         }
 
         return entry;
+    }
+
+    @ExceptionHandler(EntryNotFoundException.class)
+    public ResponseEntity<?> handleStorageFileNotFound(EntryNotFoundException exc) {
+        return ResponseEntity.notFound().build();
     }
 }

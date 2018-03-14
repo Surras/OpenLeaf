@@ -5,6 +5,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.format.annotation.DateTimeFormat;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -28,9 +29,15 @@ public class Entry {
     // getter setter
 
     public Entry() {
+        comments = new ArrayList<>();
+        locations = new ArrayList<>();
+        ratings = new ArrayList<>();
+        images = new ArrayList<>();
+        attributes = new ArrayList<>();
     }
 
     public Entry(String id, String name) {
+        this();
         this.entryId = id;
         this.name = name;
     }
