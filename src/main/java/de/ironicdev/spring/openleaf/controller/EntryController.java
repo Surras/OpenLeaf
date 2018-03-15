@@ -197,8 +197,7 @@ public class EntryController {
         ImageIO.write(thumbnailOut, "jpg", response.getOutputStream());
     }
 
-    @RequestMapping(value = "/entries/initTestData/{quantity}", method = RequestMethod.GET, produces = "application/json")
-    public String initTestData(@PathVariable("quantity") int quantity) {
+    private String initTestData(@PathVariable("quantity") int quantity) {
         Entry e = null;
 
         for (int i = 1; i <= quantity; i++) {
