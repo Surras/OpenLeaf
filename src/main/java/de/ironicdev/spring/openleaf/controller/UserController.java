@@ -4,6 +4,7 @@ import de.ironicdev.spring.openleaf.models.User;
 import de.ironicdev.spring.openleaf.models.UserRole;
 import de.ironicdev.spring.openleaf.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletResponse;
@@ -15,8 +16,15 @@ import java.util.Optional;
 @RestController
 public class UserController {
 
-    @Autowired
     UserRepository repository;
+
+    private BCryptPasswordEncoder bCryptPasswordEncoder;
+
+    public UserController(UserRepository userRepository,
+                          BCryptPasswordEncoder bCryptPasswordEncoder) {
+        this.repository = userRepository;
+        this.bCryptPasswordEncoder = bCryptPasswordEncoder;
+    }
 
     @GetMapping("/users")
     public Iterable<User> getAllUser() {
@@ -61,6 +69,10 @@ public class UserController {
 
         // set current date as register date
         user.setRegisterDate(new Date());
+
+        // encrypt user password
+        user.setPassword(bCryptPasswordEncoder.encode(user.getPassword()));
+
         repository.save(user);
         return user;
     }

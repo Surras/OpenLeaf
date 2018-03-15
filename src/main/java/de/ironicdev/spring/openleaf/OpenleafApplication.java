@@ -15,6 +15,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.ArrayList;
@@ -34,8 +35,12 @@ public class OpenleafApplication {
     @Bean
     CommandLineRunner init(StorageService storageService) {
         return (args) -> {
-     //       storageService.deleteAll();
             storageService.init();
         };
+    }
+
+    @Bean
+    public BCryptPasswordEncoder bCryptPasswordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 }
