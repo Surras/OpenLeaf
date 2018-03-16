@@ -22,3 +22,11 @@ nbbuild/
 dist/
 nbdist/
 .nb-gradle/
+/src/main/resources/application-prod.properties
+.DS_Store
+.mvn/.DS_Store
+src/.DS_Store
+src/main/resources/static/
+src/main/resources/templates/
+upload-dir/
+/src/main/resources/application-beta.properties
