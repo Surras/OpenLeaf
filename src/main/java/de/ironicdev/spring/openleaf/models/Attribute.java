@@ -9,7 +9,7 @@ public class Attribute {
 
     @Id
     private String attributeId;
-    private String name;
+    //private String name;
     private String value;
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
     private Date createdAt;
@@ -18,7 +18,7 @@ public class Attribute {
     }
 
     public Attribute(String name, String value) {
-        this.name = name;
+        //this.name = name;
         this.value = value;
     }
 
@@ -30,13 +30,13 @@ public class Attribute {
         this.attributeId = attributeId;
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
+//    public String getName() {
+//        return name;
+//    }
+//
+//    public void setName(String name) {
+//        this.name = name;
+//    }
 
     public String getValue() {
         return value;

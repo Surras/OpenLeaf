@@ -73,10 +73,10 @@ public class EntryController {
                             @RequestParam(value = "page", required = false, defaultValue = "0") int page,
                             @RequestParam(value = "pagesize", required = false, defaultValue = "30") int pageSize) throws Exception {
         try {
-            if (firstInit) {
-                firstInit = false;
-                initTestData(100);
-            }
+//            if (firstInit) {
+//                firstInit = false;
+//                initTestData(100);
+//            }
             List<Entry> entryList = new ArrayList<>();
 
             /* remove attributeFilter that already RequestParams */
@@ -289,6 +289,10 @@ public class EntryController {
         if (e.isPresent()) {
             repository.delete(e.get());
             http.setStatus(HttpServletResponse.SC_NO_CONTENT);
+
+            for (EntryImage IMAGE : e.get().getImages()) {
+                storageService.delete(IMAGE.getImageId());
+            }
         } else {
             throw new EntryNotFoundException();
         }

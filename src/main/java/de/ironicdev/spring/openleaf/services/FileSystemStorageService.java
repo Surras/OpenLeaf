@@ -128,6 +128,15 @@ public class FileSystemStorageService implements StorageService {
     }
 
     @Override
+    public void delete(String fileName)  {
+        try {
+            FileSystemUtils.deleteRecursively(this.rootLocation.resolve(fileName + ".jpg"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
     public void init() {
         try {
             Files.createDirectories(rootLocation);

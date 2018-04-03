@@ -37,7 +37,7 @@ public class UserController {
         return dbUser.orElse(null);
     }
 
-    @PostMapping("/users")
+    @PostMapping("/register")
     public User registerNewUser(@RequestBody User user) throws Exception {
         if (user == null)
             throw new Exception("can't save empty user (user = null)");
